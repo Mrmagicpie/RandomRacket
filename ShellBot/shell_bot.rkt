@@ -68,28 +68,29 @@
     'raw-message-create bot 
     (lambda (ws-client client payload)
         (let ([msg (content payload)])
-            (when (string-prefix? msg BOT_PREFIX)
-                (unless (hash-ref (hash-ref payload 'author) 'bot #f)
-                    (if (isowner? (author_id payload))
-                            ;; Remove prefix, split at space
-                            (let ([params (string-split (string-trim msg BOT_PREFIX #:right? #f) " ")])
-                                (let ([cmd_name (first params)])
-                                    (cond 
-                                        [(string=? cmd_name "shell") (shell_cmd client payload params)]
-                                        [else (http:create-message client (channel payload) (format "**Unknown command:** ~a" cmd_name))]
+            (let ([prefixnt_msg (string-trim msg BOT_PREFIX #:right? #f)])
+                (when (and (string-prefix? msg BOT_PREFIX) (non-empty-string? prefixnt_msg))
+                    (unless (hash-ref (hash-ref payload 'author) 'bot #f)
+                        (if (isowner? (author_id payload))
+                                ;; Remove prefix, split at space
+                                (let ([params (string-split prefixnt_msg " ")])
+                                    (let ([cmd_name (first params)])
+                                        (cond 
+                                            [(string=? cmd_name "shell") (shell_cmd client payload params)]
+                                            [else (http:create-message client (channel payload) (format "**Unknown command:** ~a" cmd_name))]
+                                        )
                                     )
                                 )
+                            
+                            (http:create-message client (channel payload) 
+                                #:embed (make_embed 
+                                    #:title "Permission denied!"
+                                    #:description "You do __not__ have permission to use this command.\n\nIf you believe this was an error, it's probably not."
+                                    #:color 10038562
+                                )
                             )
-                        
-                        
-                        (http:create-message client (channel payload) 
-                            #:embed (make_embed 
-                                #:title "Permission denied!"
-                                #:description "You do __not__ have permission to use this command.\n\nIf you believe this was an error, it's probably not."
-                                #:color 10038562
-                            )
-                        )
-                    )  
+                        )  
+                    )
                 )
             )
         )
